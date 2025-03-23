@@ -1,4 +1,19 @@
 ---
+# Ansible Playbook to Deploy Nexus on Proxmox LXC
+#
+# References:
+# - Proxmox API Documentation: https://pve.proxmox.com/pve-docs/api-viewer/index.html
+# - Ansible Proxmox KVM Module Documentation: https://docs.ansible.com/ansible/latest/collections/community/general/proxmox_kvm_module.html
+# - Nexus Docker Image: https://hub.docker.com/r/sonatype/nexus3
+# - Docker Installation Guide: https://docs.docker.com/engine/install/debian/
+#
+# This playbook automates the deployment of a Nexus container on a Proxmox LXC container.
+# It includes the following steps:
+# 1. Create an LXC container on Proxmox using a specified template.
+# 2. Start the LXC container.
+# 3. Install Docker inside the LXC container.
+# 4. Run the Nexus container using Docker inside the LXC container.
+# 5. Print the Nexus access information.
 
 - name: Deploy Nexus on Proxmox LXC
   hosts: localhost
