@@ -1,0 +1,33 @@
+---
+# Ansible Playbook to List LXC Templates on Proxmox Host Using API Token
+#
+# References:
+# - Proxmox API Documentation: https://pve.proxmox.com/pve-docs/api-viewer/index.html
+# - Ansible Proxmox KVM Module Documentation: https://docs.ansible.com/ansible/latest/collections/community/general/proxmox_kvm_module.html
+#
+# This playbook lists the current LXC templates available on a Proxmox host using an API token.
+
+- name: List LXC Templates on Proxmox Host
+  hosts: localhost
+  vars:
+    proxmox_host: "pve-host"
+    proxmox_api_token_id: "root@pam!ansible_root"
+    proxmox_api_token_secret: "xxxxxxxxxxxxxxxxxxxxx"
+    proxmox_node: "pve"
+  tasks:
+    - name: Get LXC templates from Proxmox
+      uri:
+        url: "https://{{ proxmox_host }}:8006/api2/json/nodes/{{ proxmox_node }}/storage/local/content"
+        method: GET
+        headers:
+          Authorization: "PVEAPIToken={{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+        validate_certs: no
+      register: result
+
+    - name: Filter LXC templates
+      set_fact:
+        lxc_templates: "{{ result.json.data | selectattr('content', 'equalto', 'vztmpl') | map(attribute='volid') | list }}"
+
+    - name: Display LXC templates
+      debug:
+        msg: "Available LXC Templates: {{ lxc_templates }}"
