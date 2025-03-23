@@ -1,0 +1,67 @@
+---
+
+- name: Deploy Nexus on Proxmox LXC
+  hosts: localhost
+  vars:
+    proxmox_host: "proxmox.example.com"
+    proxmox_user: "root@pam"
+    proxmox_password: "your-password"
+    proxmox_node: "pve"
+    lxc_template: "local:vztmpl/debian-11-standard_11.0-1_amd64.tar.gz"
+    lxc_id: "100"
+    lxc_name: "nexus-lxc"
+    nexus_port: "8081"
+    nexus_image: "sonatype/nexus3:latest"
+  tasks:
+    - name: Create LXC container
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ lxc_id }}"
+        state: present
+        name: "{{ lxc_name }}"
+        storage: local
+        ostemplate: "{{ lxc_template }}"
+        memory: 2048
+        cpus: 2
+        net0: name=eth0,bridge=vmbr0,ip=dhcp
+
+    - name: Start LXC container
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ lxc_id }}"
+        state: started
+
+    - name: Install Docker in LXC container
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ lxc_id }}"
+        command: |
+          apt-get update
+          apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+          curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
+          add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+          apt-get update
+          apt-get install -y docker-ce docker-ce-cli containerd.io
+
+    - name: Run Nexus container in LXC container
+      community.general.proxmox_kvm:
+        api_host: "{{ proxmox_host }}"
+        api_user: "{{ proxmox_user }}"
+        api_password: "{{ proxmox_password }}"
+        node: "{{ proxmox_node }}"
+        vmid: "{{ lxc_id }}"
+        command: |
+          docker run -d -p {{ nexus_port }}:8081 --name nexus {{ nexus_image }}
+
+    - name: Print Nexus access information
+      debug:
+        msg: "Nexus is running on http://{{ proxmox_host }}:{{ nexus_port }}"
